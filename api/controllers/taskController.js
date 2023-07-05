@@ -1,108 +1,111 @@
-const mongoose = require("mongoose");
-const Task = require("../models/taskModel");
-const dotenv = require("dotenv")
-dotenv.config()
-const root = process.env.ROOT;
-exports.getAllTasks = (re, res, next) => {
-    Task.find().select('title description').exec()
-        .then(docs => {
-            const response = {
-                count: docs.length,
-                tasks: docs.map(doc => {
-                    return {
-                        title: doc.title,
-                        description: doc.description,
-                        _id: doc._id,
-                        request: {
-                            type: 'GET',
-                            url: root + '/tasks/' + doc._id
-                        }
-                    }
-                })
-            }
-            res.status(200).json(response);
-        }).catch(err => {
-            console.log(err);
-            res.status(500).json({
-                error: err
-            });
-        });
-}
+const taskService = require("../services/taskService");
+const Joi = require("joi");
 
-exports.addTask = (req, res, next) => {
-    const detailsTask = new
-        Task({
-            _id: new mongoose.Types.ObjectId(),
-            title: req.body.title,
-            description: req.body.description,
-        });
-    detailsTask.save().then(result => {
-        console.log(result);
-        res.status(201).json({
-            message: "Task Added",
-            Task: {
-                title: result.title,
-                description: result.description,
-                id: result._id,
-                request: {
-                    type: 'GET',
-                    url: root + '/tasks/' + result._id
-                }
-            }
-        });
-    }).catch(err => console.log(err));
+const taskSchema = Joi.object({
+  title: Joi.string().required(),
+  description: Joi.string().required(),
+});
 
-}
-
-
-exports.getTask = (req, res, next) => {
-    const id = req.params.taskID;
-    console.log(id)
-    Task.findById(id).select('title description').exec().then(doc => {
-        console.log(doc);
-        res.status(200).json(doc);
-    }).catch(err => {
-        console.log(err);
-        res.status(500).json({ error: err });
+exports.getAllTasks = async (req, res, next) => {
+  try {
+    const tasks = await taskService.getAllTasks();
+    res.status(200).json(tasks);
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({
+      error: err,
     });
-}
+  }
+};
 
+exports.addTask = async (req, res, next) => {
+  try {
+    const { error } = taskSchema.validate(req.body);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
 
-exports.updateTask = (req, res, next) => {
-    const id = req.params.taskID;
+    const taskData = {
+      title: req.body.title,
+      description: req.body.description,
+    };
+    const task = await taskService.createTask(taskData);
+
+    res.status(201).json({
+      message: "Task Added",
+      Task: {
+        title: task.title,
+        description: task.description,
+        id: task._id,
+        request: {
+          type: "GET",
+          url: `${root}/tasks/${task._id}`,
+        },
+      },
+    });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err });
+  }
+};
+
+exports.getTask = async (req, res, next) => {
+  try {
+    const taskId = req.params.taskID;
+    const task = await taskService.getTaskById(taskId);
+
+    if (task) {
+      res.status(200).json(task);
+    } else {
+      res.status(404).json({ message: "Task not found" });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err });
+  }
+};
+
+exports.updateTask = async (req, res, next) => {
+  try {
+    const taskId = req.params.taskID;
     const payload = req.body;
-    Task.updateOne({ id }, { $set: payload })
-        .exec()
-        .then(result => {
-            console.log(result);
-            res.status(200).json(result);
-        }).catch(err => {
-            console.log(err);
-            res.status(500).json({
-                error: err
-            });
-        });
-}
 
+    const { error } = taskSchema.validate(payload);
+    if (error) {
+      return res.status(400).json({ error: error.details[0].message });
+    }
 
-exports.deleteTask = (req, res, next) => {
-    const _id = req.params.taskID;
-    Task.deleteOne({ _id })
-        .exec()
-        .then(result => {
-            res.status(200).json({
-                message: "Task deleted",
-                request: {
-                    type: "POST",
-                    url: root + "/tasks",
-                    body: { title: "String", description: "String" }
-                }
-            });
-        })
-        .catch(err => {
-            console.log(err);
-            res.status(500).json({
-                error: err
-            });
-        });
+    const updatedTask = await taskService.updateTask(taskId, payload);
+    if (updatedTask) {
+      res.status(200).json({ message: "Task updated" });
+    } else {
+      res.status(404).json({ message: "Task not found" });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err });
+  }
+};
+
+exports.deleteTask = async (req, res, next) => {
+  try {
+    const taskId = req.params.taskID;
+    const deletedTask = await taskService.deleteTask(taskId);
+
+    if (deletedTask) {
+      res.status(200).json({
+        message: "Task deleted",
+        request: {
+          type: "POST",
+          url: `${root}/tasks`,
+          body: { title: "String", description: "String" },
+        },
+      });
+    } else {
+      res.status(404).json({ message: "Task not found" });
+    }
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: err });
+  }
 };
