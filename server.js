@@ -1,20 +1,13 @@
-const express = require("express");
 const mongoose = require('mongoose');
-const core = require("cors");
-const userRoutes = require('./api/routes/userRoutes');
-const todoRoutes = require('./api/routes/taskRoutes');
-
+const express = require("express");
 const dotenv = require("dotenv");
-dotenv.config();
+const core = require("cors");
+const DB = require('./config/database');
+const userRoutes = require('./routes/userRoutes');
+const todoRoutes = require('./routes/taskRoutes');
 
+dotenv.config();
 const port = process.env.PORT;
-const mongoUri = process.env.MONGO_URI;
-const db = mongoose.connect(mongoUri);
-if (db) {
-  console.log("success");
-} else {
-  console.log("DB not Connected");
-}
 
 const app = express();
 app.use(express.json());
@@ -36,4 +29,7 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(port);
+DB.then(()=>{
+  console.log("Database connected successfully");
+  app.listen(port, console.log(`Server started on PORT:  ${port}`))
+})
