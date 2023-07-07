@@ -1,8 +1,8 @@
 const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const userService = require("../services/userService");
-const authService = require("../services/authServicce")
-
+const authService = require("../services/authServicce");
+const hashPassword = require("../utils/hashPassword");
 const dotenv = require("dotenv");
 dotenv.config();
 
@@ -61,7 +61,6 @@ const validateForgotPassword = (req) => {
   return errors;
 };
 
-
 exports.signup = async (req, res, next) => {
   try {
     const validationErrors = validateSignup(req);
@@ -74,15 +73,16 @@ exports.signup = async (req, res, next) => {
 
     if (existingUser) {
       return res.status(422).json({
-        Message: 'Mail Exists Already',
+        Message: "Mail Exists Already",
       });
     }
 
     await userService.createUser(req.body);
 
     res.status(201).json({
-      Message: 'User Created',
+      Message: "User Created",
     });
+
   } catch (err) {
     res.status(500).json({
       Error: err.message,
@@ -121,7 +121,10 @@ exports.login = async (req, res, next) => {
         }
       );
 
-      const tokenCreationResult = await authService.createAuthToken(email, token);
+      const tokenCreationResult = await authService.createAuthToken(
+        email,
+        token
+      );
 
       return res.status(200).json({
         message: "successful",
@@ -141,26 +144,25 @@ exports.login = async (req, res, next) => {
 
 exports.changePassword = async (req, res, next) => {
   try {
-    const { resetToken, newPassword } = req.body;
-    const user = await userService.findUserByResetToken(resetToken);
-
+    const { resetPasswordToken, newPassword } = req.body;
+    const user = await userService.findUserByResetToken(resetPasswordToken);
     if (!user) {
       return res.status(400).json({
         message: "Invalid or expired reset token",
       });
     }
 
-    const hashedPassword = await hashPassword(newPassword);
+    const hashedPassword = await hashPassword.hashPassword(newPassword);
     await userService.updatePassword(user, hashedPassword);
 
     res.status(200).json({ message: "Password changed successfully" });
+
   } catch (error) {
     res
       .status(500)
       .json({ message: "Failed to process change password request" });
   }
 };
-
 
 exports.forgotPassword = async (req, res, next) => {
   try {
@@ -170,24 +172,25 @@ exports.forgotPassword = async (req, res, next) => {
       return res.status(422).json({ errors: validationErrors });
     }
     const { email } = req.body;
-    const user = await userService.findUserByEmail(email)
+    const user = await userService.findUserByEmail(email);
+
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
     const resetToken = jwt.sign({ userId: user._id }, salt, {
       expiresIn: "1h",
     });
+    
     const expiration = Date.now() + 3600000;
     await userService.updateResetToken(user, resetToken, expiration);
-    console.log(resetToken);
     res.status(200).json({ message: "Password reset link sent successfully" });
+
   } catch (error) {
     res
       .status(500)
       .json({ message: "Failed to process forgot password request" });
   }
 };
-
 
 const isValidEmail = (email) => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

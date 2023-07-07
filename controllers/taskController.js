@@ -71,15 +71,8 @@ exports.updateTask = async (req, res, next) => {
   try {
     const id = req.params.taskID;
     const payload = req.body; 
-
-    if (payload.title || payload.description) {
-      if (!validateTaskFields(payload.title, payload.description)) {
-        throw new Error("Invalid task fields.");
-      }
-    }
-
     const result = await taskService.updateTask(id, payload);
-
+    
     res.status(200).json(result);
 
   } catch (err) {
