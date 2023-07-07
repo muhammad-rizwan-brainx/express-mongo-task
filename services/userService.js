@@ -2,18 +2,16 @@ const mongoose = require("mongoose");
 const User = require("../models/userModel");
 const hashPassword = require("../utils/hashPassword");
 
-const checkExistingUser = async (email) => {
-  try {
-    const existingUser = await User.findOne({ email });
-    return existingUser;
-
-  } catch (error) {
-    throw new Error('Failed to check existing user.');
-  }
+const checkExistingUser = (email) => {
+  return new Promise((resolve, reject) => {
+    User.findOne({ email })
+      .then((result) => resolve(result))
+      .catch((err) => reject("Failed to check existing user."));
+  });
 };
 
-const createUser = async (userData) => {
-  try {
+const createUser = (userData) => {
+  return new Promise(async (resolve, reject) => {
     const { userName, email, password } = userData;
 
     const hashedPassword = await hashPassword.hashPassword(password);
@@ -25,57 +23,53 @@ const createUser = async (userData) => {
       password: hashedPassword,
     });
 
-    await user.save();
-
-  } catch (error) {
-    throw new Error('Failed to create user.');
-  }
+    user
+      .save()
+      .then((result) => resolve(result))
+      .catch((err) => reject("Failed to create user."));
+  });
 };
 
-const findUserByEmail = async (email) => {
-  try {
-    const user = await User.findOne({ email });
-    return user;
-
-  } catch (error) {
-    throw new Error('Failed to find user by email.');
-  }
+const findUserByEmail = (email) => {
+  return new Promise((resolve, reject) => {
+    User.findOne({ email })
+      .then((result) => resolve(result))
+      .then((err) => reject("Failed to find user by email."));
+  });
 };
 
-const updatePassword = async (user, newPassword) => {
-  try {
+const updatePassword = (user, newPassword) => {
+  return new Promise((resolve, reject) => {
     user.password = newPassword;
     user.resetToken = null;
-    
-    await user.save();
 
-  } catch (error) {
-    throw new Error('Failed to update user password.');
-  }
+    user
+      .save()
+      .then((result = resolve(result)))
+      .catch((err) => reject("Failed to update user password."));
+  });
 };
 
-const findUserByResetToken = async (resetPasswordToken) => {
-  try {
-    const user = await User.findOne({ resetPasswordToken });
-    return user;
-
-  } catch (error) {
-    throw new Error('Failed to find user by reset token.');
-  }
+const findUserByResetToken = (resetPasswordToken) => {
+  return new Promise((resolve, reject) => {
+    User.findOne({ resetPasswordToken })
+      .then((result = resolve(result)))
+      .catch((err) => reject("Failed to find user by reset token."));
+  });
 };
 
-const updateResetToken = async (user, resetToken, expiration) => {
-  try {
+const updateResetToken = (user, resetToken, expiration) => {
+  return new Promise((resolve, reject) => {
     user.resetPasswordToken = resetToken;
     user.resetPasswordExpires = expiration;
 
-    await user.save();
-
-  } catch (error) {
-    throw new Error(
-      "Failed to update user reset password token and expiration."
-    );
-  }
+    user
+      .save()
+      .then((result) => resolve(result))
+      .catch((err) =>
+        reject("Failed to update user reset password token and expiration.")
+      );
+  });
 };
 
 module.exports = {
@@ -84,5 +78,5 @@ module.exports = {
   findUserByResetToken,
   updatePassword,
   findUserByEmail,
-  createUser
+  createUser,
 };

@@ -3,72 +3,74 @@ const Task = require("../models/taskModel");
 
 const validateTaskFields = (title, description) => {
   if (!title || !description) {
-    throw new Error("Title and description are required.");
+    return false;
   }
   return true;
 };
 
-exports.getAllTasks = async () => {
-  try {
-    const docs = await Task.find().select("title description").exec();
-    return docs;
-
-  } catch (err) {
-    throw err;
-  }
+exports.getAllTasks = () => {
+  return new Promise((resolve, reject) => {
+    Task.find()
+      .select("title description")
+      .then((result) => resolve(result))
+      .catch((err) => reject("couldn't get tasks"));
+  });
 };
 
-exports.addTask = async (title, description) => {
-  try {
+exports.addTask = (title, description) => {
+  return new Promise((resolve, reject) => {
     if (!validateTaskFields(title, description)) {
-      throw new Error("Invalid task fields.");
+      reject("Invalid task fields.");
     }
-
     const detailsTask = new Task({
       title: title,
       description: description,
     });
-
-    const result = await detailsTask.save();
-    return result;
-
-  } catch (err) {
-    throw err;
-  }
+    detailsTask
+      .save()
+      .then((result) => resolve(result))
+      .catch((err) => reject("Task addition error"));
+  });
 };
 
-exports.getTask = async (id) => {
-  try {
-    const doc = await Task.findById(id).select("title description").exec();
-    return doc;
-
-  } catch (err) {
-    throw err;
-  }
+exports.getTask = (id) => {
+  return new Promise((resolve, reject) => {
+    Task.findById(id)
+      .select("title description")
+      .then((result) => resolve(result))
+      .catch((err) => reject("Task not Found"));
+  });
 };
 
-exports.updateTask = async (id, payload) => {
-  try {
+exports.updateTask = (id, payload) => {
+  return new Promise(async (resolve, reject) => {
     if (payload.title || payload.description) {
       if (!validateTaskFields(payload.title, payload.description)) {
-        throw new Error("Invalid task fields.");
+        reject("Invalid task fields.");
       }
     }
-
-    const result = await Task.updateOne({ _id: id }, { $set: payload }).exec();
-    return result;
-
-  } catch (err) {
-    throw err;
-  }
+    const task = await Task.findOne({ _id: id });
+    if (task) {
+      const result = await Task.updateOne(
+        { _id: id },
+        { $set: payload }
+      ).exec();
+      resolve(result);
+    } else {
+      console.log("here");
+      reject("Task doesn't exist");
+    }
+  });
 };
 
-exports.deleteTask = async (id) => {
-  try {
-    const result = await Task.deleteOne({ _id: id }).exec();
-    return result;
-    
-  } catch (err) {
-    throw err;
-  }
+exports.deleteTask = (id) => {
+  return new Promise( async(resolve, reject) => {
+    const task = await Task.findOne({ _id: id });
+    if (task) {
+      const result = await Task.deleteOne({ _id: id }).exec();
+      resolve(result);
+    } else {
+      reject("Task doesn't exist");
+    }
+  });
 };

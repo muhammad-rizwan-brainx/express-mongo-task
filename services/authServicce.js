@@ -1,31 +1,25 @@
 const AuthModel = require("../models/authModel");
 
-const createAuthToken = async (email, token) => {
-  try {
+const createAuthToken = (email, token) => {
+  return new Promise(async (resolve, reject) => {
     const userAuth = await AuthModel.findOne({ email });
-
     if (!userAuth) {
       const auth = new AuthModel({
         email,
         authToken: token,
       });
 
-      await auth.save();
-
-      return "New User Token Added";
-
+      auth
+        .save()
+        .then((result) => resolve(result))
+        .catch((err) => reject("Token addition error"));
     } else {
-      await AuthModel.updateOne({ email }, { $set: { authToken: token } });
+      AuthModel.updateOne({ email }, { $set: { authToken: token } })
+        .then((result) => resolve(result))
+        .catch((err) => reject("token addition error"));
     }
-
-    return "Token Updated";
-    
-  } catch (error) {
-    throw new Error("Failed to create or update authentication token.");
-  }
+  });
 };
-
-
 
 module.exports = {
   createAuthToken,
