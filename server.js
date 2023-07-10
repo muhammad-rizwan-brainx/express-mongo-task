@@ -3,16 +3,15 @@ const express = require("express");
 const dotenv = require("dotenv");
 const core = require("cors");
 const DB = require('./config/database');
-const userRoutes = require('./routes/userRoutes');
-const todoRoutes = require('./routes/taskRoutes');
+const routes = require("./routes/index")
 
 dotenv.config();
 const port = process.env.PORT;
 
 const app = express();
 app.use(express.json());
-app.use('/user', userRoutes);
-app.use('/tasks', todoRoutes);
+app.use('/api/v1', routes);
+
 
 app.use((req, res, next) => {
   const error = new Error("Not Found");

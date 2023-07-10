@@ -4,6 +4,13 @@ dotenv.config();
 
 const root = process.env.ROOT;
 
+const validateTaskFields = (title, description) => {
+  if (!title || !description) {
+    return false;
+  }
+  return true;
+};
+
 exports.getAllTasks = async (req, res, next) => {
   try {
     const docs = await taskService.getAllTasks();
@@ -24,7 +31,6 @@ exports.getAllTasks = async (req, res, next) => {
     };
 
     res.status(200).json(response);
-
   } catch (err) {
     console.log(err);
     res.status(500).json({
@@ -36,6 +42,9 @@ exports.getAllTasks = async (req, res, next) => {
 exports.addTask = async (req, res, next) => {
   try {
     const { title, description } = req.body;
+    if (!validateTaskFields(title, description)) {
+      throw "Invalid task fields.";
+    }
     const result = await taskService.addTask(title, description);
 
     res.status(201).json({
@@ -50,9 +59,10 @@ exports.addTask = async (req, res, next) => {
         },
       },
     });
-
   } catch (err) {
-    res.status(500).json(err);
+    res.status(500).json({
+      error: err,
+    });
   }
 };
 
@@ -61,7 +71,6 @@ exports.getTask = async (req, res, next) => {
     const id = req.params.taskID;
     const doc = await taskService.getTask(id);
     res.status(200).json(doc);
-
   } catch (err) {
     res.status(500).json({ error: err });
   }
@@ -70,11 +79,19 @@ exports.getTask = async (req, res, next) => {
 exports.updateTask = async (req, res, next) => {
   try {
     const id = req.params.taskID;
-    const payload = req.body; 
-    const result = await taskService.updateTask(id, payload);
-    
-    res.status(200).json(result);
-
+    const payload = req.body;
+    if (payload.title || payload.description) {
+      if (!validateTaskFields(payload.title, payload.description)) {
+        throw "Invalid task fields.";
+      }
+    }
+    const task = await taskService.getTask(id);
+    if (task) {
+      const result = await taskService.updateTask(id, payload);
+      res.status(200).json(result);
+    } else {
+      throw "Task doesn't exist";
+    }
   } catch (err) {
     res.status(500).json({
       error: err,
@@ -85,18 +102,22 @@ exports.updateTask = async (req, res, next) => {
 exports.deleteTask = async (req, res, next) => {
   try {
     const id = req.params.taskID;
-    const result = await taskService.deleteTask(id);
+    const task = await taskService.getTask(id);
+    if (task) {
+      const result = await taskService.deleteTask(id);
 
-    res.status(200).json({
-      message: "Task deleted",
-      result: result,
-      request: {
-        type: "POST",
-        url: root + "/tasks",
-        body: { title: "String", description: "String" },
-      },
-    });
-
+      res.status(200).json({
+        message: "Task deleted",
+        result: result,
+        request: {
+          type: "POST",
+          url: root + "/tasks",
+          body: { title: "String", description: "String" },
+        },
+      });
+    } else {
+      throw "Task doesn't exist";
+    }
   } catch (err) {
     res.status(500).json({
       error: err,

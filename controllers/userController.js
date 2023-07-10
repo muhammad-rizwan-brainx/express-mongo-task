@@ -151,9 +151,7 @@ exports.changePassword = async (req, res, next) => {
         message: "Invalid or expired reset token",
       });
     }
-
-    const hashedPassword = await hashPassword.hashPassword(newPassword);
-    await userService.updatePassword(user, hashedPassword);
+    await userService.updatePassword(user, password);
 
     res.status(200).json({ message: "Password changed successfully" });
 
